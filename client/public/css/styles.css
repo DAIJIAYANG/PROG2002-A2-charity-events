@@ -1,0 +1,18 @@
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; margin: 0; background:#fafafa; color:#222; }
+header { background: #114488; color: #fff; padding: 16px; }
+nav a { color: #fff; margin-right: 16px; text-decoration: none; font-weight: bold; }
+.container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card { background:#fff; border:1px solid #ddd; border-radius:10px; padding:16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.card img { width:100%; height:160px; object-fit:cover; border-radius:8px; }
+.badge { display:inline-block; background:#eef; color:#114488; padding:2px 8px; border-radius:999px; font-size:12px; }
+footer { text-align:center; padding:24px; color:#666; }
+label { display:block; margin-top:12px; }
+input, select, button { padding:8px; margin-top:6px; }
+.btn { background:#114488; color:#fff; border:none; border-radius:6px; padding:10px 14px; cursor:pointer; }
+.btn.secondary { background:#555; }
+.alert { background:#fdecec; color:#b20000; padding:10px; border-radius:8px; margin:12px 0; border:1px solid #f5c2c2; }
+.success { background:#ecfdf0; color:#0f7a34; padding:10px; border-radius:8px; margin:12px 0; border:1px solid #b9e6c9; }
+.KPI { font-size: 13px; color:#444; }
+.small { font-size: 12px; color:#555; }
