@@ -1,0 +1,10 @@
+﻿# api
+api/node_modules/
+api/.env
+
+# client
+client/node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
