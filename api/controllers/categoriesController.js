@@ -16,7 +16,7 @@ export async function listCategories(req, res) {
       data: categories
     });
   } catch (err) {
-    // Print the actual error to the server console for debugging
+    // Print the actual error to the server console for debugging。
     console.error('listCategories error:', err);
 
     // Send a generic error to the client (don’t leak internals)

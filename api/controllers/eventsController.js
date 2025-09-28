@@ -39,7 +39,7 @@ export async function showEvent(req, res) {
       return res.status(404).json({ ok: false, error: 'Event not found or suspended.' });
     }
 
-    // Otherwise return the event
+    // Otherwise return the event。
     res.json({ ok: true, data: event });
   } catch (err) {
     // Same idea: log on server, keep client message simple

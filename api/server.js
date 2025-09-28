@@ -17,7 +17,7 @@ app.use(express.json());
 app.use('/api/events', eventsRouter);
 app.use('/api/categories', categoriesRouter);
 
-// Health check
+// Health check.
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });

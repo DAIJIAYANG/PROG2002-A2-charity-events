@@ -13,7 +13,7 @@ async function loadCategories() {
       }
     }
   } catch (e) {
-    // 分类加载失败不影响主体搜索，这里静默处理或在控制台提示
+    // 分类加载失败不影响主体搜索，这里静默处理或在控制台提示.
     console.warn('Load categories failed:', e);
   }
 }
