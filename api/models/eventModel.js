@@ -1,15 +1,16 @@
 // models/eventModel.js
+// Simple DB reads for events and categories
 import pool from '../db/event_db.js';
 
-// Build WHERE and params from filters (simple and explicit)
+// build WHERE clause from filters
 function buildWhere(filters = {}) {
   const where = [];
   const params = [];
 
-  // always skip suspended events
+  // skip suspended
   where.push('e.is_suspended = 0');
 
-  // status filter: "upcoming"/"active" >= today, "past" < today
+  // status: upcoming/active => end >= today, past => end < today
   if (filters.status) {
     if (filters.status === 'upcoming' || filters.status === 'active') {
       where.push('e.end_datetime >= CURDATE()');
@@ -24,13 +25,13 @@ function buildWhere(filters = {}) {
     params.push(filters.category_id);
   }
 
-  // fuzzy match by location
+  // location LIKE
   if (filters.location) {
     where.push('e.location LIKE ?');
     params.push('%' + filters.location + '%');
   }
 
-  // date range (start >= from, end <= to)
+  // date range
   if (filters.date_from) {
     where.push('e.start_datetime >= ?');
     params.push(filters.date_from);
@@ -40,7 +41,7 @@ function buildWhere(filters = {}) {
     params.push(filters.date_to);
   }
 
-  // simple keyword search
+  // keyword in name/description/purpose
   if (filters.q) {
     where.push('(e.name LIKE ? OR e.description LIKE ? OR e.purpose LIKE ?)');
     params.push('%' + filters.q + '%', '%' + filters.q + '%', '%' + filters.q + '%');
@@ -50,7 +51,7 @@ function buildWhere(filters = {}) {
   return { where: whereClause, params };
 }
 
-// list events with optional filters
+// list events (optional filters)
 export async function getEvents(filters = {}) {
   const { where, params } = buildWhere(filters);
   const sql = `
@@ -68,7 +69,7 @@ export async function getEvents(filters = {}) {
   return rows;
 }
 
-// get one event by id (ignore suspended)
+// one event by id (ignore suspended)
 export async function getEventById(id) {
   const sql = `
     SELECT e.*, c.name AS category_name, o.name AS org_name, o.mission AS org_mission, o.website AS org_website
@@ -81,7 +82,7 @@ export async function getEventById(id) {
   return rows[0] || null;
 }
 
-// list all categories (for filters, etc.)
+// all categories
 export async function getCategories() {
   const [rows] = await pool.query('SELECT id, name, slug FROM categories ORDER BY name ASC');
   return rows;

@@ -1,166 +1,131 @@
-// Event details page script (simple student-style comments)
+// event.js — simple version
 
-// fallback in case API_BASE isn't injected
+// if not injected, fallback to empty
 const API_BASE = window.API_BASE || '';
 
-function getParam(name) {
-  // get ?id= from current url
-  try {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
-  } catch (e) {
-    // if something weird with URL, just return null
-    return null;
-  }
+function getIdFromUrl() {
+  // read ?id=xxx
+  const p = new URLSearchParams(window.location.search);
+  return p.get('id');
 }
 
-// formatter: money like $1,234.56 (using browser locale)
-const fmtMoney = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
-function money(n) {
-  const v = Number(n);
-  return Number.isFinite(v) ? fmtMoney.format(v) : '—'; // show dash if invalid
-}
-
-// formatter: date → local string
-function fmtDate(d) {
-  const t = new Date(d);
-  return isNaN(t) ? '—' : t.toLocaleString();
-}
-
-// quick helper to build an element
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined && text !== null) node.textContent = String(text);
-  return node;
-}
-
-// image with lazy load + fallback if broken
-function img(src, alt) {
-  const im = document.createElement('img');
-  im.alt = alt || '';
-  im.src = src || 'public/img/placeholder.jpg';
-  im.loading = 'lazy';
-  im.referrerPolicy = 'no-referrer';
-  im.addEventListener('error', () => {
-    // if img url 404 or something, swap to placeholder
-    im.src = 'public/img/placeholder.jpg';
-  });
-  return im;
-}
+document.addEventListener('DOMContentLoaded', loadEvent);
 
 async function loadEvent() {
-  const id = getParam('id');                   // we expect /event.html?id=123
+  const id = getIdFromUrl();
   const card = document.getElementById('eventCard');
-  const err = document.getElementById('eventError');
+  const errBox = document.getElementById('eventError');
 
-  if (!card || !err) return;                   // required containers missing
-
-  // reset UI and show a simple loading msg
-  card.replaceChildren();
-  err.style.display = 'none';
-  card.append(el('p', 'small', 'Loading event...'));
+  if (!card || !errBox) return;
 
   if (!id) {
-    // no id in url → nothing to show
-    card.replaceChildren();
-    err.textContent = 'No event selected.';
-    err.style.display = 'block';
+    errBox.textContent = 'No event selected.';
+    errBox.style.display = 'block';
     return;
   }
 
-  try {
-    // fetch one event by id
-    const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error(`Network error: ${res.status}`);
+  card.textContent = 'Loading...';
 
-    // expected shape: { ok: true, data: {...} }
+  try {
+    const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('network');
+
     const json = await res.json();
-    if (!json || json.ok !== true || !json.data) {
-      throw new Error(json?.error || 'API error');
-    }
+    if (!json || json.ok !== true || !json.data) throw new Error('api');
 
     const e = json.data;
 
-    // derive some display fields with safe fallbacks
-    const priceNum = Number(e.ticket_price);
-    const priceText = Number.isFinite(priceNum) && priceNum > 0 ? money(priceNum) : 'Free';
+    // clear and start render
+    card.textContent = '';
 
-    const goal = Number(e.goal_amount);
-    const raised = Number(e.raised_amount);
-    // percentage, keep in [0,100]
-    const pct = Number.isFinite(goal) && goal > 0 && Number.isFinite(raised)
-      ? Math.min(100, Math.max(0, Math.round((raised / goal) * 100)))
-      : 0;
+    // title
+    const h2 = document.createElement('h2');
+    h2.textContent = e.name || 'Event';
+    card.appendChild(h2);
 
-    // render (avoid dumping raw data into innerHTML to reduce XSS risk)
-    card.replaceChildren();
+    // image (only if exists)
+    if (e.image_url) {
+      const im = document.createElement('img');
+      im.src = e.image_url;
+      im.alt = e.name || '';
+      card.appendChild(im);
+    }
 
-    // top image + title
-    card.append(img(e.image_url, `${e.name || 'Event'} image`));
-    card.append(el('h2', null, e.name || 'Untitled Event'));
+    // category tag
+    if (e.category_name) {
+      const tag = document.createElement('div');
+      tag.className = 'badge';
+      tag.textContent = e.category_name;
+      card.appendChild(tag);
+    }
 
-    // category tag (if we have it)
-    if (e.category_name) card.append(el('div', 'badge', e.category_name));
-
-    // when (use innerHTML only for the <strong> label, values are formatted)
-    const when = el('p', 'small');
-    when.innerHTML = `<strong>When:</strong> ${fmtDate(e.start_datetime)} — ${fmtDate(e.end_datetime)}`;
-    card.append(when);
+    // when
+    const start = new Date(e.start_datetime);
+    const end = new Date(e.end_datetime);
+    const pWhen = document.createElement('p');
+    const startText = isNaN(start) ? (e.start_datetime || '') : start.toLocaleString();
+    const endText = isNaN(end) ? (e.end_datetime || '') : end.toLocaleString();
+    pWhen.textContent = 'When: ' + startText + ' — ' + endText;
+    card.appendChild(pWhen);
 
     // where
-    const where = el('p', 'small');
-    where.innerHTML = `<strong>Where:</strong> ${e.location ? String(e.location) : '—'}`;
-    card.append(where);
+    const pWhere = document.createElement('p');
+    pWhere.textContent = 'Where: ' + (e.location || '');
+    card.appendChild(pWhere);
 
-    // organiser info
-    const org = el('p', 'small');
-    const orgName = e.org_name ? String(e.org_name) : '—';
-    const orgExtra = e.org_mission ? ' — ' + String(e.org_mission) : '';
-    org.innerHTML = `<strong>Organiser:</strong> ${orgName}${orgExtra}`;
-    card.append(org);
+    // organiser
+    const pOrg = document.createElement('p');
+    pOrg.textContent = 'Organiser: ' + (e.org_name || '');
+    card.appendChild(pOrg);
 
-    // purpose + about sections (plain text)
-    card.append(el('h3', null, 'Purpose'));
-    card.append(el('p', null, e.purpose || ''));
+    // purpose
+    const h3Purpose = document.createElement('h3');
+    h3Purpose.textContent = 'Purpose';
+    card.appendChild(h3Purpose);
+    const pPurpose = document.createElement('p');
+    pPurpose.textContent = e.purpose || '';
+    card.appendChild(pPurpose);
 
-    card.append(el('h3', null, 'About the Event'));
-    card.append(el('p', null, e.description || ''));
+    // about
+    const h3About = document.createElement('h3');
+    h3About.textContent = 'About the Event';
+    card.appendChild(h3About);
+    const pAbout = document.createElement('p');
+    pAbout.textContent = e.description || '';
+    card.appendChild(pAbout);
 
-    // tickets
-    card.append(el('h3', null, 'Tickets'));
-    const priceP = el('p');
-    priceP.innerHTML = `Price: <strong>${priceText}</strong>`;
-    card.append(priceP);
+    // tickets (very basic)
+    const h3Tickets = document.createElement('h3');
+    h3Tickets.textContent = 'Tickets';
+    card.appendChild(h3Tickets);
+    const pPrice = document.createElement('p');
+    const priceNum = Number(e.ticket_price);
+    pPrice.textContent = 'Price: ' + (priceNum > 0 ? ('$' + priceNum) : 'Free');
+    card.appendChild(pPrice);
 
-    // register button (just a placeholder for now)
-    const btn = el('button', 'btn');
-    btn.id = 'registerBtn';
-    btn.setAttribute('aria-label', 'Register for this event');
+    // register button (placeholder)
+    const btn = document.createElement('button');
+    btn.className = 'btn';
     btn.textContent = 'Register';
     btn.addEventListener('click', () => {
-      // we implement real register flow in A3 (not in A2)
-      alert('This feature is currently under construction.');
+      alert('This feature is under construction.');
     });
-    card.append(btn);
+    card.appendChild(btn);
 
-    // goal vs progress
-    card.append(el('h3', null, 'Goal vs Progress'));
-    const goalP = el('p');
-    const goalStr = Number.isFinite(goal) ? money(goal) : '—';
-    const raisedStr = Number.isFinite(raised) ? money(raised) : '—';
-    goalP.textContent = `Goal: ${goalStr} · Raised: ${raisedStr} (${pct}%)`;
-    card.append(goalP);
+    // goal vs raised (very basic)
+    const h3Goal = document.createElement('h3');
+    h3Goal.textContent = 'Goal vs Progress';
+    card.appendChild(h3Goal);
+    const pGoal = document.createElement('p');
+    pGoal.textContent = 'Goal: $' + (e.goal_amount ?? '') + ' · Raised: $' + (e.raised_amount ?? '');
+    card.appendChild(pGoal);
 
-  } catch (ex) {
-    // show a friendly error (don’t crash the whole page)
-    card.replaceChildren();
-    err.textContent = 'Failed to load event. ' + (ex?.message || ex);
-    err.style.display = 'block';
+  } catch (err) {
+    card.textContent = '';
+    const errBox = document.getElementById('eventError');
+    if (errBox) {
+      errBox.textContent = 'Failed to load event.';
+      errBox.style.display = 'block';
+    }
   }
 }
-
-// run after DOM is ready
-document.addEventListener('DOMContentLoaded', loadEvent);

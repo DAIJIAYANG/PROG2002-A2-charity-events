@@ -1,33 +1,30 @@
-# PROG2002 A2 — Charity Events API (usernameA2-api)
+# PROG2002 A2 — Charity Events API (JIAYANG DAI)
 
-This is the REST API (Node.js + Express + MySQL) for the Assessment 2 case study.
+Simple REST API for Assessment 2 using Node.js, Express and MySQL.
 
 ## Tech
 - Node.js, Express, mysql2
-- RESTful endpoints (GET only for A2)
+- GET endpoints only (A2 scope)
 - MySQL schema + seed data
 - `.env` for config
 
 ## Quick Start
 
-1) Create the DB and seed it:
+1) Create the database and import sample data in MySQL:
 ```sql
 SOURCE sql/schema.sql;
 SOURCE sql/seed.sql;
-```
 
 2) Copy env and set credentials:
-```bash
 cp .env.example .env
-# edit .env for your MySQL root/password
-```
+# edit .env to match your MySQL user/password and DB name
+
 
 3) Install & run:
-```bash
 npm install
 npm run start
-# API on http://localhost:${PORT or 3000}
-```
+# API runs at http://localhost:${PORT or 3000}
+
 
 ### Endpoints
 - `GET /api/health` – health check

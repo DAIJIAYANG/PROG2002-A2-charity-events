@@ -1,16 +1,17 @@
-# PROG2002 A2 — Charity Events Client (usernameA2-clientside)
+# PROG2002 A2 — Charity Events Client
 
-This is the client-side website (HTML + JS + DOM). It consumes the REST API from `usernameA2-api`.
+Simple client (HTML + JS). Uses the A2 API to show charity events.
 
 ## Run
-- Open `index.html` in a browser **or** serve with a simple static server.
-- Make sure the API is running on `http://localhost:3000` (or edit `public/js/config.js`).
+- Open `index.html` in a browser, or serve the folder with a basic static server.
+- Make sure the API is running on `http://localhost:3000`.
+- If your API port is different, edit `public/js/config.js` (change `API_BASE`).
 
 ## Pages
-- `index.html` – Home (static org info + dynamic list of active/upcoming events)
-- `search.html` – Search by date/location/category
-- `event.html` – Event details + "Register" placeholder
+- `index.html` – shows upcoming events from `/api/events?status=upcoming`.
+- `search.html` – search by date / location / category.
+- `event.html` – event details page with a **Register** button (placeholder).
 
-## Note
-- The "Register" button shows a modal/alert saying the feature is under construction (per A2 brief).
-- Error messages are rendered via basic DOM manipulation.
+## Notes
+- The **Register** button shows an alert: “This feature is under construction.”
+- Errors are shown via simple DOM updates (no frameworks).

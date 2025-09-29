@@ -1,7 +1,10 @@
+// db/event_db.js
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-dotenv.config();
 
+dotenv.config(); // load .env into process.env
+
+// create a shared MySQL pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,

@@ -13,7 +13,7 @@ INSERT INTO categories (name, slug) VALUES
 ('Benefit Concert', 'benefit-concert'),
 ('Community Fair', 'community-fair');
 
--- Events (ensure a mix of past and upcoming relative to Sep 2025)
+-- Events (past and upcoming)
 INSERT INTO events (org_id, category_id, name, purpose, description, location, start_datetime, end_datetime, image_url, ticket_price, goal_amount, raised_amount, is_suspended) VALUES
 (1, 1, 'Spring River Fun Run', 'Raise funds for children''s health programs.', '5km and 10km fun run along the Brisbane River.', 'Kangaroo Point, Brisbane', '2025-10-11 07:00:00', '2025-10-11 12:00:00', 'https://picsum.photos/seed/funrun1/800/400', 25.00, 20000.00, 3500.00, 0),
 (1, 4, 'Voices for Hope Concert', 'Support local mental health services.', 'An evening concert featuring local bands and choirs.', 'QUT Gardens Theatre, Brisbane', '2025-11-15 18:30:00', '2025-11-15 21:30:00', 'https://picsum.photos/seed/concert1/800/400', 35.00, 30000.00, 12000.00, 0),

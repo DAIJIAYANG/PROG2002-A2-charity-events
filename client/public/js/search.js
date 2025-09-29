@@ -1,145 +1,169 @@
-// 加载分类下拉
+// search.js — basic version (student-style)
+
+// fallback if not injected
+const API_BASE = window.API_BASE || '';
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadCategories();
+  const form = document.getElementById('searchForm');
+  if (form) form.addEventListener('submit', runSearch);
+  const clearBtn = document.getElementById('clearBtn');
+  if (clearBtn) clearBtn.addEventListener('click', clearFilters);
+});
+
+// load <select> options from API
 async function loadCategories() {
   const sel = document.getElementById('category_id');
+  if (!sel) return;
   try {
     const res = await fetch(`${API_BASE}/api/categories`);
     const json = await res.json();
-    if (json.ok) {
+    if (json && Array.isArray(json.data)) {
       for (const c of json.data) {
         const opt = document.createElement('option');
         opt.value = c.id;
-        opt.textContent = c.name;
+        opt.textContent = c.name || '';
         sel.appendChild(opt);
       }
     }
-  } catch (e) {
-    // 分类加载失败不影响主体搜索，这里静默处理或在控制台提示.
-    console.warn('Load categories failed:', e);
+  } catch (_) {
+    console.log('load categories failed');
   }
 }
 
-// 表单转查询字符串（默认只查 upcoming）
+// build query string from form (default upcoming)
 function formToQuery(form) {
-  const params = new URLSearchParams();
-  const date_from = form.date_from.value;
-  const date_to = form.date_to.value;
-  const location = form.location.value.trim();
-  const category_id = form.category_id.value;
-
-  // 默认查“即将/正在进行”的活动
-  params.set('status', 'upcoming');
-
-  if (date_from) params.set('date_from', date_from);
-  if (date_to) params.set('date_to', date_to);
-  if (location) params.set('location', location);
-  if (category_id) params.set('category_id', category_id);
-
-  return params.toString();
+  const p = new URLSearchParams();
+  p.set('status', 'upcoming');
+  if (form.date_from.value) p.set('date_from', form.date_from.value);
+  if (form.date_to.value) p.set('date_to', form.date_to.value);
+  const loc = form.location.value.trim();
+  if (loc) p.set('location', loc);
+  if (form.category_id.value) p.set('category_id', form.category_id.value);
+  return p.toString();
 }
 
-// 运行搜索（含日期校验与友好提示）
-async function runSearch(evt) {
-  evt.preventDefault();
+function whenText(start, end) {
+  const s = new Date(start);
+  const e = new Date(end);
+  const sOk = !isNaN(s);
+  const eOk = !isNaN(e);
+  if (sOk && eOk) return s.toLocaleString() + ' — ' + e.toLocaleString();
+  if (sOk) return s.toLocaleString();
+  if (eOk) return e.toLocaleString();
+  return '';
+}
+
+// make one result card (very simple)
+function makeCard(ev) {
+  const card = document.createElement('article');
+  card.className = 'card';
+
+  const h3 = document.createElement('h3');
+  h3.textContent = ev.name || 'Event';
+  card.appendChild(h3);
+
+  if (ev.image_url) {
+    const im = document.createElement('img');
+    im.src = ev.image_url;
+    im.alt = ev.name || '';
+    card.appendChild(im);
+  }
+
+  if (ev.category_name) {
+    const b = document.createElement('div');
+    b.className = 'badge';
+    b.textContent = ev.category_name;
+    card.appendChild(b);
+  }
+
+  const pWhen = document.createElement('p');
+  pWhen.className = 'small';
+  pWhen.textContent = whenText(ev.start_datetime, ev.end_datetime);
+  card.appendChild(pWhen);
+
+  const pWhere = document.createElement('p');
+  pWhere.textContent = ev.location || '';
+  card.appendChild(pWhere);
+
+  const pPrice = document.createElement('p');
+  const priceNum = Number(ev.ticket_price);
+  pPrice.textContent = 'Ticket: ' + (priceNum > 0 ? ('$' + priceNum) : 'Free');
+  card.appendChild(pPrice);
+
+  if (ev.id !== undefined && ev.id !== null) {
+    const a = document.createElement('a');
+    a.className = 'btn';
+    a.href = `event.html?id=${encodeURIComponent(ev.id)}`;
+    a.textContent = 'View Details';
+    card.appendChild(a);
+  }
+
+  return card;
+}
+
+// submit search
+async function runSearch(e) {
+  e.preventDefault();
 
   const form = document.getElementById('searchForm');
   const msg = document.getElementById('searchMsg');
   const err = document.getElementById('searchError');
   const grid = document.getElementById('resultsGrid');
 
-  // 重置提示与结果
   msg.textContent = '';
   err.style.display = 'none';
   err.textContent = '';
   grid.innerHTML = '';
 
-  // —— 简单日期校验：From 不能大于 To
+  // simple date check
   const df = form.date_from.value;
   const dt = form.date_to.value;
   if (df && dt && df > dt) {
-    err.textContent = 'Date range is invalid: "From" should be earlier than "To".';
+    err.textContent = 'Date range is invalid: From should be earlier than To.';
     err.style.display = 'block';
     return;
   }
 
-  // —— 全空提示：允许查全部 upcoming，但提示用户可以设置条件
-  const allEmpty =
-    !df &&
-    !dt &&
-    !form.location.value.trim() &&
-    !form.category_id.value;
-
-  if (allEmpty) {
-    msg.textContent =
-      'Tip: Set date, location or category — or click Search to view all upcoming events.';
-  }
+  // tip if all empty
+  const allEmpty = !df && !dt && !form.location.value.trim() && !form.category_id.value;
+  if (allEmpty) msg.textContent = 'Tip: you can set date / location / category.';
 
   try {
+    msg.textContent = allEmpty ? msg.textContent : 'Searching...';
     const qs = formToQuery(form);
-    const url = `${API_BASE}/api/events?${qs}`;
-
-    // 加载中的小提示
-    if (!allEmpty) msg.textContent = 'Searching...';
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Network error');
-
+    const res = await fetch(`${API_BASE}/api/events?${qs}`);
+    if (!res.ok) throw new Error('network');
     const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'API error');
+    const list = Array.isArray(json?.data) ? json.data : [];
 
-    msg.textContent = `Found ${json.count} event(s).`;
+    msg.textContent = `Found ${list.length} event(s).`;
 
-    if (json.count === 0) {
-      grid.innerHTML = '<p>No matching events.</p>';
+    if (list.length === 0) {
+      const p = document.createElement('p');
+      p.textContent = 'No matching events.';
+      grid.appendChild(p);
       return;
     }
 
-    for (const e of json.data) {
-      const priceText =
-        Number(e.ticket_price) === 0 ? 'Free' : `$${Number(e.ticket_price).toFixed(2)}`;
-      const goalPct =
-        e.goal_amount > 0
-          ? Math.min(100, Math.round((Number(e.raised_amount) / Number(e.goal_amount)) * 100))
-          : 0;
-
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.innerHTML = `
-        <img src="${e.image_url || 'public/img/placeholder.jpg'}" alt="${e.name} image"/>
-        <h3>${e.name}</h3>
-        <div class="badge">${e.category_name}</div>
-        <p class="small">${new Date(e.start_datetime).toLocaleString()} — ${new Date(
-          e.end_datetime
-        ).toLocaleString()}</p>
-        <p>${e.location}</p>
-        <p class="KPI">Ticket: <strong>${priceText}</strong> · Goal ${
-        e.goal_amount ? '$' + Number(e.goal_amount).toLocaleString() : '$0'
-      } — Raised $${Number(e.raised_amount).toLocaleString()} (${goalPct}%)</p>
-        <a class="btn" href="event.html?id=${e.id}">View Details</a>
-      `;
-      grid.appendChild(card);
+    for (const ev of list) {
+      grid.appendChild(makeCard(ev));
     }
-  } catch (e) {
+  } catch (_) {
     msg.textContent = '';
-    err.textContent = 'Search failed: ' + e.message;
+    err.textContent = 'Search failed.';
     err.style.display = 'block';
   }
 }
 
-// 清空筛选并清理状态
+// clear filters and UI
 function clearFilters() {
   const form = document.getElementById('searchForm');
-  form.reset();
-  document.getElementById('resultsGrid').innerHTML = '';
+  if (form) form.reset();
+  const grid = document.getElementById('resultsGrid');
+  if (grid) grid.innerHTML = '';
   const msg = document.getElementById('searchMsg');
+  if (msg) msg.textContent = '';
   const err = document.getElementById('searchError');
-  msg.textContent = '';
-  err.style.display = 'none';
-  err.textContent = '';
+  if (err) { err.textContent = ''; err.style.display = 'none'; }
 }
-
-// 入口
-document.addEventListener('DOMContentLoaded', () => {
-  loadCategories();
-  document.getElementById('searchForm').addEventListener('submit', runSearch);
-  document.getElementById('clearBtn').addEventListener('click', clearFilters);
-});
