@@ -1,10 +1,16 @@
 -- PROG2002 A2 - Charity Events schema
--- Create database
-CREATE DATABASE IF NOT EXISTS charityevents_db CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+CREATE DATABASE IF NOT EXISTS charityevents_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
 USE charityevents_db;
 
--- Organizations
+-- drop child first
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS organizations;
+
+-- organizations
 CREATE TABLE organizations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
@@ -16,16 +22,14 @@ CREATE TABLE organizations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Categories
-DROP TABLE IF EXISTS categories;
+-- categories
 CREATE TABLE categories (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   slug VARCHAR(100) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
 
--- Events
-DROP TABLE IF EXISTS events;
+-- events
 CREATE TABLE events (
   id INT AUTO_INCREMENT PRIMARY KEY,
   org_id INT NOT NULL,
