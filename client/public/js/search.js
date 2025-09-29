@@ -35,11 +35,19 @@ async function loadCategories() {
 function formToQuery(form) {
   const p = new URLSearchParams();
   p.set('status', 'upcoming');
+
   if (form.date_from.value) p.set('date_from', form.date_from.value);
   if (form.date_to.value) p.set('date_to', form.date_to.value);
+
   const loc = form.location.value.trim();
   if (loc) p.set('location', loc);
+
   if (form.category_id.value) p.set('category_id', form.category_id.value);
+
+  // NEW: keyword
+  const kw = form.q ? form.q.value.trim() : '';
+  if (kw) p.set('q', kw);
+
   return p.toString();
 }
 
@@ -125,9 +133,10 @@ async function runSearch(e) {
     return;
   }
 
-  // tip if all empty
-  const allEmpty = !df && !dt && !form.location.value.trim() && !form.category_id.value;
-  if (allEmpty) msg.textContent = 'Tip: you can set date / location / category.';
+  // also check keyword for "all empty" tip
+  const kw = form.q ? form.q.value.trim() : '';
+  const allEmpty = !df && !dt && !form.location.value.trim() && !form.category_id.value && !kw;
+  if (allEmpty) msg.textContent = 'Tip: you can set date / location / category / keyword.';
 
   try {
     msg.textContent = allEmpty ? msg.textContent : 'Searching...';

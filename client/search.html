@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -40,12 +40,19 @@
               <option value="">Any</option>
             </select>
           </div>
+          <!-- NEW: keyword filter -->
+          <div>
+            <label for="q">Keyword</label>
+            <input type="text" id="q" name="q" placeholder="name / purpose...">
+          </div>
         </div>
+
         <div style="margin-top:12px;">
           <button type="submit" class="btn">Search</button>
           <button type="button" id="clearBtn" class="btn secondary">Clear Filters</button>
         </div>
       </form>
+
       <div id="searchMsg" class="small" style="margin-top:8px;"></div>
       <div id="searchError" class="alert" style="display:none;"></div>
     </section>
