@@ -112,3 +112,6 @@ Client-side website that calls the API from `api/`.
 - Errors are shown with simple DOM updates.
 - No POST/PUT/DELETE in A2.
 
+### GenAI usage
+I used ChatGPT to help with debugging wording and to suggest small code comments and error messages. 
+All final database design, API routes, and client logic were implemented, tested and verified by myself.

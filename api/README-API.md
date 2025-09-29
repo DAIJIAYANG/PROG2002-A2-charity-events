@@ -45,3 +45,7 @@ npm run start
 
 ### For A3
 - Add POST/PUT/DELETE for registrations, admin, etc.
+
+### GenAI usage
+I used ChatGPT to help with debugging wording and to suggest small code comments and error messages. 
+All final database design, API routes, and client logic were implemented, tested and verified by myself.

@@ -1,131 +1,103 @@
-// event.js — simple version
-
-// if not injected, fallback to empty
+// Event detail page
 const API_BASE = window.API_BASE || '';
-
-function getIdFromUrl() {
-  // read ?id=xxx
-  const p = new URLSearchParams(window.location.search);
-  return p.get('id');
-}
 
 document.addEventListener('DOMContentLoaded', loadEvent);
 
-async function loadEvent() {
-  const id = getIdFromUrl();
-  const card = document.getElementById('eventCard');
-  const errBox = document.getElementById('eventError');
+function getId() {
+  try {
+    const u = new URL(window.location.href);
+    return u.searchParams.get('id');
+  } catch {
+    return null;
+  }
+}
 
-  if (!card || !errBox) return;
+function el(tag, className, text) {
+  const n = document.createElement(tag);
+  if (className) n.className = className;
+  if (text !== undefined) n.textContent = String(text);
+  return n;
+}
+
+function whenText(s, e) {
+  const a = new Date(s), b = new Date(e);
+  const okA = !isNaN(a), okB = !isNaN(b);
+  if (okA && okB) return a.toLocaleString() + ' — ' + b.toLocaleString();
+  if (okA) return a.toLocaleString();
+  if (okB) return b.toLocaleString();
+  return '';
+}
+
+async function loadEvent() {
+  const id = getId();
+  const card = document.getElementById('eventCard');
+  const err = document.getElementById('eventError');
+  if (!card) return;
+
+  card.replaceChildren();
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  card.append(el('p', 'small', 'Loading event...'));
 
   if (!id) {
-    errBox.textContent = 'No event selected.';
-    errBox.style.display = 'block';
+    card.replaceChildren();
+    if (err) { err.textContent = 'No event selected.'; err.style.display = 'block'; }
     return;
   }
 
-  card.textContent = 'Loading...';
-
   try {
-    const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`);
+    const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`, {
+      headers: { 'Accept': 'application/json' }
+    });
     if (!res.ok) throw new Error('network');
 
     const json = await res.json();
-    if (!json || json.ok !== true || !json.data) throw new Error('api');
+    const e = json?.data;
+    if (!e) throw new Error('not found');
 
-    const e = json.data;
+    card.replaceChildren();
 
-    // clear and start render
-    card.textContent = '';
-
-    // title
-    const h2 = document.createElement('h2');
-    h2.textContent = e.name || 'Event';
-    card.appendChild(h2);
-
-    // image (only if exists)
     if (e.image_url) {
       const im = document.createElement('img');
       im.src = e.image_url;
-      im.alt = e.name || '';
-      card.appendChild(im);
+      im.alt = e.name || 'event image';
+      im.loading = 'lazy';
+      card.append(im);
     }
 
-    // category tag
-    if (e.category_name) {
-      const tag = document.createElement('div');
-      tag.className = 'badge';
-      tag.textContent = e.category_name;
-      card.appendChild(tag);
-    }
+    card.append(el('h2', null, e.name || 'Event'));
+    if (e.category_name) card.append(el('div', 'badge', e.category_name));
 
-    // when
-    const start = new Date(e.start_datetime);
-    const end = new Date(e.end_datetime);
-    const pWhen = document.createElement('p');
-    const startText = isNaN(start) ? (e.start_datetime || '') : start.toLocaleString();
-    const endText = isNaN(end) ? (e.end_datetime || '') : end.toLocaleString();
-    pWhen.textContent = 'When: ' + startText + ' — ' + endText;
-    card.appendChild(pWhen);
+    card.append(el('p', 'small', 'When: ' + whenText(e.start_datetime, e.end_datetime)));
+    card.append(el('p', 'small', 'Where: ' + (e.location || '')));
 
-    // where
-    const pWhere = document.createElement('p');
-    pWhere.textContent = 'Where: ' + (e.location || '');
-    card.appendChild(pWhere);
+    const org = [];
+    if (e.org_name) org.push(e.org_name);
+    if (e.org_mission) org.push('— ' + e.org_mission);
+    if (org.length) card.append(el('p', 'small', 'Organiser: ' + org.join(' ')));
 
-    // organiser
-    const pOrg = document.createElement('p');
-    pOrg.textContent = 'Organiser: ' + (e.org_name || '');
-    card.appendChild(pOrg);
+    card.append(el('h3', null, 'Purpose'));
+    card.append(el('p', null, e.purpose || ''));
 
-    // purpose
-    const h3Purpose = document.createElement('h3');
-    h3Purpose.textContent = 'Purpose';
-    card.appendChild(h3Purpose);
-    const pPurpose = document.createElement('p');
-    pPurpose.textContent = e.purpose || '';
-    card.appendChild(pPurpose);
+    card.append(el('h3', null, 'About the Event'));
+    card.append(el('p', null, e.description || ''));
 
-    // about
-    const h3About = document.createElement('h3');
-    h3About.textContent = 'About the Event';
-    card.appendChild(h3About);
-    const pAbout = document.createElement('p');
-    pAbout.textContent = e.description || '';
-    card.appendChild(pAbout);
+    card.append(el('h3', null, 'Tickets'));
+    const price = Number(e.ticket_price);
+    card.append(el('p', null, 'Price: ' + (price > 0 ? `$${price.toFixed(2)}` : 'Free')));
 
-    // tickets (very basic)
-    const h3Tickets = document.createElement('h3');
-    h3Tickets.textContent = 'Tickets';
-    card.appendChild(h3Tickets);
-    const pPrice = document.createElement('p');
-    const priceNum = Number(e.ticket_price);
-    pPrice.textContent = 'Price: ' + (priceNum > 0 ? ('$' + priceNum) : 'Free');
-    card.appendChild(pPrice);
+    const btn = el('button', 'btn', 'Register');
+    btn.addEventListener('click', () => alert('This feature is currently under construction.'));
+    card.append(btn);
 
-    // register button (placeholder)
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.textContent = 'Register';
-    btn.addEventListener('click', () => {
-      alert('This feature is under construction.');
-    });
-    card.appendChild(btn);
-
-    // goal vs raised (very basic)
-    const h3Goal = document.createElement('h3');
-    h3Goal.textContent = 'Goal vs Progress';
-    card.appendChild(h3Goal);
-    const pGoal = document.createElement('p');
-    pGoal.textContent = 'Goal: $' + (e.goal_amount ?? '') + ' · Raised: $' + (e.raised_amount ?? '');
-    card.appendChild(pGoal);
-
-  } catch (err) {
-    card.textContent = '';
-    const errBox = document.getElementById('eventError');
-    if (errBox) {
-      errBox.textContent = 'Failed to load event.';
-      errBox.style.display = 'block';
-    }
+    card.append(el('h3', null, 'Goal vs Progress'));
+    const goal = Number(e.goal_amount);
+    const raised = Number(e.raised_amount);
+    const pct = (Number.isFinite(goal) && goal > 0 && Number.isFinite(raised))
+      ? Math.min(100, Math.round((raised / goal) * 100))
+      : 0;
+    card.append(el('p', null, `Goal: ${Number.isFinite(goal) ? '$' + goal.toLocaleString() : '—'} · Raised: ${Number.isFinite(raised) ? '$' + raised.toLocaleString() : '—'} (${pct}%)`));
+  } catch (_) {
+    card.replaceChildren();
+    if (err) { err.textContent = 'Failed to load event.'; err.style.display = 'block'; }
   }
 }

@@ -15,3 +15,7 @@ Simple client (HTML + JS). Uses the A2 API to show charity events.
 ## Notes
 - The **Register** button shows an alert: “This feature is under construction.”
 - Errors are shown via simple DOM updates (no frameworks).
+
+### GenAI usage
+I used ChatGPT to help with debugging wording and to suggest small code comments and error messages. 
+All final database design, API routes, and client logic were implemented, tested and verified by myself.

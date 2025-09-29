@@ -1,33 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home | Charity Events</title>
-  <link rel="stylesheet" href="public/css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home — Charity Events</title>
+  <link rel="stylesheet" href="public/css/styles.css" />
 </head>
 <body>
-  <header>
-    <div class="container">
-      <h1>Charity Events</h1>
-      <nav>
-        <a href="index.html">Home</a>
-        <a href="search.html">Search</a>
-      </nav>
-    </div>
-  </header>
+<header>
+  <div class="container">
+    <h1>Charity Events — Brisbane & Gold Coast</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="search.html">Search</a>
+    </nav>
+  </div>
+</header>
 
-  <main class="container">
-    <h2>Upcoming Events</h2>
-    <div id="eventsGrid" class="grid"></div>
-    <div id="homeError" class="alert" style="display:none;"></div>
-  </main>
+<main class="container">
+  <section class="card">
+    <h2>About Our Mission</h2>
+    <p>We connect local charities with the community through events that raise awareness and funds for important causes.</p>
+    <p>Contact us: <a href="mailto:contact@charityevents.local">contact@charityevents.local</a></p>
+  </section>
 
-  <footer>
-    <p>Charity Events</p>
-  </footer>
+  <h2 style="margin-top:24px;">Upcoming & Active Events</h2>
+  <div id="eventsGrid" class="grid" aria-live="polite"></div>
+  <div id="homeError" class="alert" style="display:none;"></div>
+</main>
 
-  <script src="public/js/config.js"></script>
-  <script src="public/js/home.js"></script>
+<footer>
+  <p>&copy; 2025 Charity Events</p>
+</footer>
+
+<!-- order matters: config first -->
+<script src="public/js/config.js"></script>
+<script src="public/js/home.js"></script>
 </body>
 </html>
