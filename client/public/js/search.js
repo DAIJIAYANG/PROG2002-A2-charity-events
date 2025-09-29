@@ -1,35 +1,37 @@
+// base url
 const API_BASE = window.API_BASE || '';
 
 document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
-  const form = document.getElementById('searchForm');
-  if (form) form.addEventListener('submit', runSearch);
-  const clearBtn = document.getElementById('clearBtn');
-  if (clearBtn) clearBtn.addEventListener('click', clearFilters);
+  const f = document.getElementById('searchForm');
+  if (f) f.addEventListener('submit', runSearch);
+  const clr = document.getElementById('clearBtn');
+  if (clr) clr.addEventListener('click', clearFilters);
 });
 
+// fill category select
 async function loadCategories() {
   const sel = document.getElementById('category_id');
   if (!sel) return;
   try {
     const res = await fetch(`${API_BASE}/api/categories`);
     const json = await res.json();
-    if (json?.ok && Array.isArray(json.data)) {
-      for (const c of json.data) {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name || '';
-        sel.appendChild(opt);
-      }
+    const list = Array.isArray(json?.data) ? json.data : [];
+    for (const c of list) {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name || '';
+      sel.appendChild(opt);
     }
-  } catch (_) {
-    // non-blocking
+  } catch {
+    // ignore
   }
 }
 
-function formToQuery(form) {
+// build query (default: upcoming)
+function buildQS(form) {
   const p = new URLSearchParams();
-  p.set('status', 'upcoming'); // default
+  p.set('status', 'upcoming');
   if (form.date_from.value) p.set('date_from', form.date_from.value);
   if (form.date_to.value) p.set('date_to', form.date_to.value);
   const loc = form.location.value.trim();
@@ -40,34 +42,44 @@ function formToQuery(form) {
 
 function whenText(s, e) {
   const a = new Date(s), b = new Date(e);
-  const okA = !isNaN(a), okB = !isNaN(b);
-  if (okA && okB) return a.toLocaleString() + ' — ' + b.toLocaleString();
-  if (okA) return a.toLocaleString();
-  if (okB) return b.toLocaleString();
+  const as = !isNaN(a), bs = !isNaN(b);
+  if (as && bs) return a.toLocaleString() + ' — ' + b.toLocaleString();
+  if (as) return a.toLocaleString();
+  if (bs) return b.toLocaleString();
   return '';
 }
 
+// make one card
 function makeCard(ev) {
   const card = document.createElement('article');
   card.className = 'card';
+
+  const h = document.createElement('h3');
+  h.textContent = ev.name || 'Event';
+  card.appendChild(h);
 
   if (ev.image_url) {
     const im = document.createElement('img');
     im.src = ev.image_url;
     im.alt = ev.name || '';
     im.loading = 'lazy';
+    im.addEventListener('error', () => (im.src = 'public/img/placeholder.jpg'));
     card.appendChild(im);
   }
 
-  const h3 = document.createElement('h3');
-  h3.textContent = ev.name || 'Event';
-  card.appendChild(h3);
+  // past tag
+  if (new Date(ev.end_datetime) < new Date()) {
+    const t = document.createElement('div');
+    t.className = 'badge';
+    t.textContent = 'Past';
+    card.appendChild(t);
+  }
 
   if (ev.category_name) {
-    const b = document.createElement('div');
-    b.className = 'badge';
-    b.textContent = ev.category_name;
-    card.appendChild(b);
+    const tag = document.createElement('div');
+    tag.className = 'badge';
+    tag.textContent = ev.category_name;
+    card.appendChild(tag);
   }
 
   const p1 = document.createElement('p');
@@ -79,15 +91,23 @@ function makeCard(ev) {
   p2.textContent = ev.location || '';
   card.appendChild(p2);
 
-  const a = document.createElement('a');
-  a.className = 'btn';
-  a.href = `event.html?id=${encodeURIComponent(ev.id)}`;
-  a.textContent = 'View Details';
-  card.appendChild(a);
+  const price = Number(ev.ticket_price);
+  const p3 = document.createElement('p');
+  p3.textContent = 'Ticket: ' + (price > 0 ? '$' + price : 'Free');
+  card.appendChild(p3);
+
+  if (ev.id !== undefined && ev.id !== null) {
+    const a = document.createElement('a');
+    a.className = 'btn';
+    a.href = `event.html?id=${encodeURIComponent(ev.id)}`;
+    a.textContent = 'View Details';
+    card.appendChild(a);
+  }
 
   return card;
 }
 
+// submit
 async function runSearch(e) {
   e.preventDefault();
 
@@ -97,10 +117,11 @@ async function runSearch(e) {
   const grid = document.getElementById('resultsGrid');
 
   msg.textContent = '';
-  err.style.display = 'none';
   err.textContent = '';
+  err.style.display = 'none';
   grid.innerHTML = '';
 
+  // quick date check
   const df = form.date_from.value;
   const dt = form.date_to.value;
   if (df && dt && df > dt) {
@@ -109,15 +130,14 @@ async function runSearch(e) {
     return;
   }
 
-  const allEmpty = !df && !dt && !form.location.value.trim() && !form.category_id.value;
-  if (allEmpty) msg.textContent = 'Tip: set date / location / category, or search all upcoming.';
+  const empty = !df && !dt && !form.location.value.trim() && !form.category_id.value;
+  if (empty) msg.textContent = 'Tip: set date / location / category if you want.';
 
   try {
-    const qs = formToQuery(form);
-    msg.textContent = 'Searching...';
+    if (!empty) msg.textContent = 'Searching...';
+    const qs = buildQS(form);
     const res = await fetch(`${API_BASE}/api/events?${qs}`);
     if (!res.ok) throw new Error('network');
-
     const json = await res.json();
     const list = Array.isArray(json?.data) ? json.data : [];
 
@@ -130,19 +150,19 @@ async function runSearch(e) {
       return;
     }
 
-    for (const ev of list) {
-      grid.appendChild(makeCard(ev));
-    }
-  } catch (_) {
+    for (const ev of list) grid.appendChild(makeCard(ev));
+
+  } catch {
     msg.textContent = '';
     err.textContent = 'Search failed.';
     err.style.display = 'block';
   }
 }
 
+// reset form + ui
 function clearFilters() {
-  const form = document.getElementById('searchForm');
-  if (form) form.reset();
+  const f = document.getElementById('searchForm');
+  if (f) f.reset();
   const grid = document.getElementById('resultsGrid');
   if (grid) grid.innerHTML = '';
   const msg = document.getElementById('searchMsg');

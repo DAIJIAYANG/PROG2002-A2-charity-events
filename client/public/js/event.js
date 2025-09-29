@@ -1,103 +1,132 @@
-// Event detail page
+// base url (from config.js)
 const API_BASE = window.API_BASE || '';
 
-document.addEventListener('DOMContentLoaded', loadEvent);
-
-function getId() {
+// read ?id=
+function getParam(name) {
   try {
-    const u = new URL(window.location.href);
-    return u.searchParams.get('id');
+    const url = new URL(location.href);
+    return url.searchParams.get(name);
   } catch {
     return null;
   }
 }
 
-function el(tag, className, text) {
-  const n = document.createElement(tag);
-  if (className) n.className = className;
-  if (text !== undefined) n.textContent = String(text);
-  return n;
+// format money
+const moneyFmt = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+function money(n) {
+  const v = Number(n);
+  return Number.isFinite(v) ? moneyFmt.format(v) : '—';
 }
 
-function whenText(s, e) {
-  const a = new Date(s), b = new Date(e);
-  const okA = !isNaN(a), okB = !isNaN(b);
-  if (okA && okB) return a.toLocaleString() + ' — ' + b.toLocaleString();
-  if (okA) return a.toLocaleString();
-  if (okB) return b.toLocaleString();
-  return '';
+// format date
+function dstr(d) {
+  const t = new Date(d);
+  return isNaN(t) ? '—' : t.toLocaleString();
+}
+
+// tiny dom helpers
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = String(text);
+  return n;
+}
+function img(src, alt) {
+  const im = document.createElement('img');
+  im.src = src || 'public/img/placeholder.jpg';
+  im.alt = alt || '';
+  im.loading = 'lazy';
+  im.referrerPolicy = 'no-referrer';
+  im.addEventListener('error', () => (im.src = 'public/img/placeholder.jpg'));
+  return im;
 }
 
 async function loadEvent() {
-  const id = getId();
-  const card = document.getElementById('eventCard');
+  const id = getParam('id');
+  const box = document.getElementById('eventCard');
   const err = document.getElementById('eventError');
-  if (!card) return;
+  if (!box || !err) return;
 
-  card.replaceChildren();
-  if (err) { err.style.display = 'none'; err.textContent = ''; }
-  card.append(el('p', 'small', 'Loading event...'));
+  box.replaceChildren();
+  err.style.display = 'none';
+  box.append(el('p', 'small', 'Loading...'));
 
   if (!id) {
-    card.replaceChildren();
-    if (err) { err.textContent = 'No event selected.'; err.style.display = 'block'; }
+    box.replaceChildren();
+    err.textContent = 'No event selected.';
+    err.style.display = 'block';
     return;
   }
 
   try {
     const res = await fetch(`${API_BASE}/api/events/${encodeURIComponent(id)}`, {
-      headers: { 'Accept': 'application/json' }
+      headers: { Accept: 'application/json' }
     });
-    if (!res.ok) throw new Error('network');
+    if (!res.ok) throw new Error(res.status);
 
     const json = await res.json();
     const e = json?.data;
-    if (!e) throw new Error('not found');
+    if (!json?.ok || !e) throw new Error(json?.error || 'bad data');
 
-    card.replaceChildren();
+    const priceNum = Number(e.ticket_price);
+    const priceText = priceNum > 0 ? money(priceNum) : 'Free';
 
-    if (e.image_url) {
-      const im = document.createElement('img');
-      im.src = e.image_url;
-      im.alt = e.name || 'event image';
-      im.loading = 'lazy';
-      card.append(im);
-    }
-
-    card.append(el('h2', null, e.name || 'Event'));
-    if (e.category_name) card.append(el('div', 'badge', e.category_name));
-
-    card.append(el('p', 'small', 'When: ' + whenText(e.start_datetime, e.end_datetime)));
-    card.append(el('p', 'small', 'Where: ' + (e.location || '')));
-
-    const org = [];
-    if (e.org_name) org.push(e.org_name);
-    if (e.org_mission) org.push('— ' + e.org_mission);
-    if (org.length) card.append(el('p', 'small', 'Organiser: ' + org.join(' ')));
-
-    card.append(el('h3', null, 'Purpose'));
-    card.append(el('p', null, e.purpose || ''));
-
-    card.append(el('h3', null, 'About the Event'));
-    card.append(el('p', null, e.description || ''));
-
-    card.append(el('h3', null, 'Tickets'));
-    const price = Number(e.ticket_price);
-    card.append(el('p', null, 'Price: ' + (price > 0 ? `$${price.toFixed(2)}` : 'Free')));
-
-    const btn = el('button', 'btn', 'Register');
-    btn.addEventListener('click', () => alert('This feature is currently under construction.'));
-    card.append(btn);
-
-    card.append(el('h3', null, 'Goal vs Progress'));
     const goal = Number(e.goal_amount);
     const raised = Number(e.raised_amount);
-    const pct = (Number.isFinite(goal) && goal > 0 && Number.isFinite(raised))
-      ? Math.min(100, Math.round((raised / goal) * 100))
+    const pct = goal > 0 && Number.isFinite(raised)
+      ? Math.min(100, Math.max(0, Math.round((raised / goal) * 100)))
       : 0;
-    card.append(el('p', null, `Goal: ${Number.isFinite(goal) ? '$' + goal.toLocaleString() : '—'} · Raised: ${Number.isFinite(raised) ? '$' + raised.toLocaleString() : '—'} (${pct}%)`));
-  } catch (_) {
-    card.replaceChildren();
-    if (err) { err.textContent = 'Failed to load event.'; err.style.display = 'block'; }
+
+    // render
+    box.replaceChildren();
+
+    box.append(img(e.image_url, `${e.name || 'Event'} image`));
+    box.append(el('h2', null, e.name || 'Untitled Event'));
+
+    // past tag
+    if (new Date(e.end_datetime) < new Date()) {
+      box.append(el('div', 'badge', 'Past'));
+    }
+
+    if (e.category_name) box.append(el('div', 'badge', e.category_name));
+
+    const p1 = el('p', 'small');
+    p1.innerHTML = `<strong>When:</strong> ${dstr(e.start_datetime)} — ${dstr(e.end_datetime)}`;
+    box.append(p1);
+
+    const p2 = el('p', 'small');
+    p2.innerHTML = `<strong>Where:</strong> ${e.location || '—'}`;
+    box.append(p2);
+
+    const p3 = el('p', 'small');
+    p3.innerHTML = `<strong>Organiser:</strong> ${e.org_name || '—'}${e.org_mission ? ' — ' + e.org_mission : ''}`;
+    box.append(p3);
+
+    box.append(el('h3', null, 'Purpose'));
+    box.append(el('p', null, e.purpose || ''));
+
+    box.append(el('h3', null, 'About the Event'));
+    box.append(el('p', null, e.description || ''));
+
+    box.append(el('h3', null, 'Tickets'));
+    const p4 = el('p');
+    p4.innerHTML = `Price: <strong>${priceText}</strong>`;
+    box.append(p4);
+
+    const btn = el('button', 'btn', 'Register');
+    btn.id = 'registerBtn';
+    btn.addEventListener('click', () => alert('This feature is currently under construction.'));
+    box.append(btn);
+
+    box.append(el('h3', null, 'Goal vs Progress'));
+    const p5 = el('p', null, `Goal: ${Number.isFinite(goal) ? money(goal) : '—'} · Raised: ${Number.isFinite(raised) ? money(raised) : '—'} (${pct}%)`);
+    box.append(p5);
+
+  } catch (ex) {
+    box.replaceChildren();
+    err.textContent = 'Failed to load event. ' + (ex?.message || ex);
+    err.style.display = 'block';
   }
 }
+
+document.addEventListener('DOMContentLoaded', loadEvent);
