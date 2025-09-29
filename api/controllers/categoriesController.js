@@ -2,24 +2,17 @@
 import { getCategories } from '../models/eventModel.js';
 
 // GET /api/categories
-// Fetch all categories from the database and return JSON.
-// No query/body params needed for this route.
+// Return all categories as JSON. No input needed.
 export async function listCategories(req, res) {
   try {
-    // Ask the model for the data
-    const categories = await getCategories();
-
-    // Return a simple, consistent shape for the frontend
+    const categories = await getCategories(); // read from DB
     res.json({
       ok: true,
-      count: categories.length, // how many rows we got
+      count: categories.length,
       data: categories
     });
   } catch (err) {
-    // Print the actual error to the server console for debugging。
-    console.error('listCategories error:', err);
-
-    // Send a generic error to the client (don’t leak internals)
+    console.error('[categories] list error:', err); // log on server
     res.status(500).json({ ok: false, error: 'Failed to fetch categories.' });
   }
 }
